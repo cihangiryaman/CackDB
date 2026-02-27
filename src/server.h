@@ -11,6 +11,8 @@ typedef SOCKET socket_t;
 #define INVALID_SOCK INVALID_SOCKET
 #else
 #include <sys/socket.h>
+#include <sys/select.h>
+#include <sys/time.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
