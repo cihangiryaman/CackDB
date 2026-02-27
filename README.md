@@ -1,4 +1,4 @@
-# inMemDb — In-Memory Key-Value Database
+# CackDb — In-Memory Key-Value Database
 
 A Redis-like in-memory key-value database written in C, featuring a TCP server with RESP2 protocol compatibility, TTL-based key expiration, and RDB-style persistence.
 
