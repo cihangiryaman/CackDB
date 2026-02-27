@@ -9,62 +9,112 @@
     --bg: #0d1117; --surface: #161b22; --border: #30363d;
     --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff;
     --green: #3fb950; --red: #f85149; --yellow: #d29922;
+    --orange: #e3853a;
     --font: 'Segoe UI', system-ui, sans-serif;
     --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; flex-direction: column; }
 
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 16px 24px; display: flex; align-items: center; gap: 16px; }
+  /* ── Header ── */
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; position: relative; z-index: 30; }
   header h1 { font-size: 20px; font-weight: 600; }
   header h1 span { color: var(--accent); }
   .status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); transition: background .3s; }
   .status-dot.connected { background: var(--green); }
 
-  .container { display: flex; flex: 1; overflow: hidden; }
+  /* Hamburger — only visible on mobile */
+  .hamburger { display: none; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 16px; cursor: pointer; line-height: 1; }
+  .hamburger:hover { background: var(--border); }
 
-  .sidebar { width: 280px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; flex-shrink: 0; }
-  .sidebar h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); margin-bottom: 12px; }
+  /* ── Layout ── */
+  .container { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+  /* ── Sidebar ── */
+  .sidebar { width: 280px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0; }
+  .sidebar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .sidebar-header h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
+  .sidebar-filter { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 12px; padding: 7px 10px; border-radius: 6px; outline: none; margin-bottom: 14px; }
+  .sidebar-filter:focus { border-color: var(--accent); }
   .cmd-group { margin-bottom: 20px; }
   .cmd-group h3 { font-size: 13px; color: var(--accent); margin-bottom: 8px; }
   .cmd-btn { display: block; width: 100%; text-align: left; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-family: var(--mono); font-size: 12px; cursor: pointer; margin-bottom: 6px; transition: all .15s; }
   .cmd-btn:hover { background: var(--border); border-color: var(--accent); }
+  .cmd-btn.hidden { display: none; }
 
+  /* ── Sidebar overlay (mobile) ── */
+  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 19; }
+  .sidebar-overlay.active { display: block; }
+
+  /* ── Console ── */
   .console-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
   .output { flex: 1; overflow-y: auto; padding: 16px 24px; font-family: var(--mono); font-size: 13px; line-height: 1.7; }
   .output .entry { margin-bottom: 8px; }
-  .output .cmd-line { color: var(--accent); }
-  .output .cmd-line::before { content: "❯ "; color: var(--green); }
-  .output .result { color: var(--text); white-space: pre-wrap; padding-left: 16px; }
+
+  .output .cmd-line { color: var(--accent); display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; }
+  .output .cmd-line::before { content: "❯ "; color: var(--green); flex-shrink: 0; }
+  .output .cmd-name { color: var(--orange); font-weight: 600; }
+  .output .cmd-args { color: var(--accent); }
+
+  .output .result-wrap { position: relative; display: flex; align-items: flex-start; gap: 6px; padding-left: 16px; }
+  .output .result { color: var(--text); white-space: pre-wrap; flex: 1; }
   .output .result.error { color: var(--red); }
   .output .result.nil { color: var(--dim); font-style: italic; }
-  .output .ts { color: var(--dim); font-size: 11px; margin-left: 8px; }
+  .output .copy-btn { opacity: 0; background: transparent; border: 1px solid var(--border); color: var(--dim); font-size: 11px; padding: 1px 6px; border-radius: 4px; cursor: pointer; flex-shrink: 0; transition: opacity .15s, color .15s; line-height: 1.6; margin-top: 2px; }
+  .output .result-wrap:hover .copy-btn { opacity: 1; }
+  .output .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  .output .ts { color: var(--dim); font-size: 11px; margin-left: 6px; }
   .output .welcome { color: var(--dim); margin-bottom: 16px; }
 
+  /* ── Quick-action bar ── */
+  .kv-panel { background: var(--surface); border-top: 1px solid var(--border); padding: 10px 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .kv-panel button { background: transparent; border: 1px solid var(--border); color: var(--accent); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: background .15s; }
+  .kv-panel button:hover { background: var(--border); }
+  .kv-panel span { font-size: 12px; color: var(--dim); margin-left: auto; }
+
+  /* ── Input bar ── */
   .input-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
   .input-bar label { color: var(--green); font-family: var(--mono); font-size: 14px; flex-shrink: 0; }
   .input-bar input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 14px; padding: 10px 14px; border-radius: 6px; outline: none; }
   .input-bar input:focus { border-color: var(--accent); }
-  .input-bar button { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; }
-  .input-bar button:hover { opacity: .85; }
+  .input-bar input:disabled { opacity: .5; cursor: not-allowed; }
+  #sendBtn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; min-width: 68px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity .15s; }
+  #sendBtn:hover:not(:disabled) { opacity: .85; }
+  #sendBtn:disabled { opacity: .55; cursor: not-allowed; }
 
-  .kv-panel { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 24px; display: flex; gap: 12px; align-items: center; }
-  .kv-panel button { background: transparent; border: 1px solid var(--border); color: var(--accent); padding: 6px 14px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-  .kv-panel button:hover { background: var(--border); }
-  .kv-panel span { font-size: 12px; color: var(--dim); }
+  /* Spinner */
+  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* ── Toast ── */
+  #toast { position: fixed; top: 20px; right: 20px; background: #1f2937; border: 1px solid var(--border); color: var(--text); font-size: 13px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.4); z-index: 100; opacity: 0; transform: translateY(-8px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.success { border-color: var(--green); color: var(--green); }
+  #toast.error { border-color: var(--red); color: var(--red); }
+
+  /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-  @media (max-width: 768px) { .sidebar { display: none; } }
+  /* ── Mobile ── */
+  @media (max-width: 768px) {
+    .hamburger { display: block; }
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100%; z-index: 20;
+      transform: translateX(-100%); transition: transform .25s ease;
+    }
+    .sidebar.open { transform: translateX(0); }
+  }
 </style>
 </head>
 <body>
 
 <header>
+  <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">☰</button>
   <h1><span>inMemDb</span> Test Console</h1>
   <div class="status">
     <div class="status-dot" id="statusDot"></div>
@@ -72,11 +122,16 @@
   </div>
 </header>
 
-<div class="container">
-  <aside class="sidebar">
-    <h2>Quick Commands</h2>
+<div id="sidebarOverlay" class="sidebar-overlay"></div>
 
-    <div class="cmd-group">
+<div class="container">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Quick Commands</h2>
+    </div>
+    <input type="search" class="sidebar-filter" id="sidebarFilter" placeholder="🔍 Filter commands…" autocomplete="off">
+
+    <div class="cmd-group" data-group="string">
       <h3>🔑 String / Int</h3>
       <button class="cmd-btn" data-cmd='SET test "hello world"'>SET test "hello world"</button>
       <button class="cmd-btn" data-cmd="GET test">GET test</button>
@@ -89,7 +144,7 @@
       <button class="cmd-btn" data-cmd="EXISTS test">EXISTS test</button>
     </div>
 
-    <div class="cmd-group">
+    <div class="cmd-group" data-group="list">
       <h3>📋 List</h3>
       <button class="cmd-btn" data-cmd="RPUSH mylist apple banana cherry">RPUSH mylist apple banana cherry</button>
       <button class="cmd-btn" data-cmd="LRANGE mylist 0 -1">LRANGE mylist 0 -1</button>
@@ -99,7 +154,7 @@
       <button class="cmd-btn" data-cmd="LLEN mylist">LLEN mylist</button>
     </div>
 
-    <div class="cmd-group">
+    <div class="cmd-group" data-group="ttl">
       <h3>⏱️ TTL</h3>
       <button class="cmd-btn" data-cmd="SET session abc EX 60">SET session abc EX 60</button>
       <button class="cmd-btn" data-cmd="EXPIRE test 30">EXPIRE test 30</button>
@@ -107,7 +162,7 @@
       <button class="cmd-btn" data-cmd="PERSIST test">PERSIST test</button>
     </div>
 
-    <div class="cmd-group">
+    <div class="cmd-group" data-group="server">
       <h3>🖥️ Server</h3>
       <button class="cmd-btn" data-cmd="PING">PING</button>
       <button class="cmd-btn" data-cmd="DBSIZE">DBSIZE</button>
@@ -131,17 +186,19 @@
     <div class="kv-panel">
       <button onclick="sendCommand('DBSIZE')">📊 DBSIZE</button>
       <button onclick="sendCommand('PING')">🏓 PING</button>
-      <button onclick="sendCommand('FLUSHDB')">🗑️ FLUSH ALL</button>
+      <button onclick="flushAll()">🗑️ FLUSH ALL</button>
       <button onclick="clearOutput()">🧹 Clear Console</button>
       <span id="keyCount"></span>
     </div>
     <div class="input-bar">
       <label>❯</label>
-      <input type="text" id="cmdInput" placeholder="Type a command... (e.g. SET name Alice)" autocomplete="off" spellcheck="false">
-      <button onclick="submitInput()">Send</button>
+      <input type="text" id="cmdInput" placeholder="Type a command… (e.g. SET name Alice)" autocomplete="off" spellcheck="false">
+      <button id="sendBtn" onclick="submitInput()">Send</button>
     </div>
   </main>
 </div>
+
+<div id="toast"></div>
 
 <script>
 const API = "/cmd";
@@ -149,9 +206,22 @@ const output = document.getElementById("output");
 const cmdInput = document.getElementById("cmdInput");
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
+const sendBtn = document.getElementById("sendBtn");
 
 let history = [], historyIdx = -1;
+let busy = false;
 
+/* ── Toast ── */
+let toastTimer = null;
+function showToast(msg, type = "") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.className = "show" + (type ? " " + type : "");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = ""; }, 2200);
+}
+
+/* ── Tokenizer ── */
 function tokenize(line) {
   const args = [];
   let i = 0;
@@ -173,10 +243,25 @@ function tokenize(line) {
   return args;
 }
 
-async function sendCommand(line) {
+/* ── Loading state ── */
+function setLoading(on) {
+  busy = on;
+  cmdInput.disabled = on;
+  sendBtn.disabled = on;
+  if (on) {
+    sendBtn.innerHTML = '<span class="spinner"></span>';
+  } else {
+    sendBtn.textContent = "Send";
+    cmdInput.focus();
+  }
+}
+
+/* ── Send command ── */
+async function sendCommand(line, silent = false) {
   const args = tokenize(line.trim());
   if (args.length === 0) return;
-  appendCmd(line);
+  if (!silent) appendCmd(line);
+  setLoading(true);
   try {
     const res = await fetch(API, {
       method: "POST",
@@ -184,41 +269,104 @@ async function sendCommand(line) {
       body: JSON.stringify({ args })
     });
     const data = await res.json();
-    const isErr = data.result.startsWith("(error)");
-    const isNil = data.result === "(nil)";
-    appendResult(data.result, isErr ? "error" : isNil ? "nil" : "");
+    if (!silent) {
+      const isErr = data.result.startsWith("(error)");
+      const isNil = data.result === "(nil)";
+      appendResult(data.result, isErr ? "error" : isNil ? "nil" : "");
+    }
     setConnected(data.ok);
+    return data;
   } catch (e) {
-    appendResult("Connection error: " + e.message, "error");
+    if (!silent) appendResult("Connection error: " + e.message, "error");
     setConnected(false);
+  } finally {
+    setLoading(false);
   }
 }
 
+/* ── FLUSHDB with confirmation ── */
+function flushAll() {
+  if (!confirm("⚠️  This will delete ALL keys from the database.\n\nAre you sure?")) return;
+  sendCommand("FLUSHDB");
+}
+
+/* ── Submit from input bar ── */
 function submitInput() {
+  if (busy) return;
   const line = cmdInput.value.trim();
   if (!line) return;
   history.unshift(line);
   historyIdx = -1;
+  /* Confirm dangerous commands typed manually too */
+  const cmd = line.trim().toUpperCase().split(/\s+/)[0];
+  if (cmd === "FLUSHDB" || cmd === "FLUSHALL") {
+    if (!confirm("⚠️  This will delete ALL keys from the database.\n\nAre you sure?")) return;
+  }
   sendCommand(line);
   cmdInput.value = "";
 }
 
+/* ── Append command line ── */
 function appendCmd(text) {
   const ts = new Date().toLocaleTimeString();
+  const tokens = text.trim().split(/\s+/);
+  const cmdName = tokens[0] || "";
+  const rest = tokens.slice(1).join(" ");
+
   const div = document.createElement("div");
   div.className = "entry";
-  div.innerHTML = '<div class="cmd-line">' + esc(text) + '<span class="ts">' + ts + '</span></div>';
+
+  const cmdLine = document.createElement("div");
+  cmdLine.className = "cmd-line";
+
+  const nameSpan = document.createElement("span");
+  nameSpan.className = "cmd-name";
+  nameSpan.textContent = cmdName;
+  cmdLine.appendChild(nameSpan);
+
+  if (rest) {
+    const argsSpan = document.createElement("span");
+    argsSpan.className = "cmd-args";
+    argsSpan.textContent = " " + esc(rest);
+    cmdLine.appendChild(argsSpan);
+  }
+
+  const tsSpan = document.createElement("span");
+  tsSpan.className = "ts";
+  tsSpan.textContent = ts;
+  cmdLine.appendChild(tsSpan);
+
+  div.appendChild(cmdLine);
   output.appendChild(div);
   output.scrollTop = output.scrollHeight;
 }
 
+/* ── Append result with copy button ── */
 function appendResult(text, cls) {
   const entries = output.querySelectorAll(".entry");
   const last = entries[entries.length - 1];
+  if (!last) return;
+
+  const wrap = document.createElement("div");
+  wrap.className = "result-wrap";
+
   const div = document.createElement("div");
   div.className = "result " + (cls || "");
   div.textContent = text;
-  if (last) last.appendChild(div);
+
+  const copyBtn = document.createElement("button");
+  copyBtn.className = "copy-btn";
+  copyBtn.title = "Copy result";
+  copyBtn.textContent = "📋";
+  copyBtn.addEventListener("click", () => {
+    navigator.clipboard.writeText(text).then(() => {
+      showToast("Copied to clipboard!", "success");
+    }).catch(() => showToast("Copy failed", "error"));
+  });
+
+  wrap.appendChild(div);
+  wrap.appendChild(copyBtn);
+  last.appendChild(wrap);
   output.scrollTop = output.scrollHeight;
 }
 
@@ -231,16 +379,64 @@ function setConnected(ok) {
   statusText.textContent = ok ? "Connected" : "Disconnected";
 }
 
+/* ── Keyboard navigation ── */
 cmdInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); submitInput(); }
   if (e.key === "ArrowUp") { e.preventDefault(); if (historyIdx < history.length - 1) { historyIdx++; cmdInput.value = history[historyIdx]; } }
   if (e.key === "ArrowDown") { e.preventDefault(); if (historyIdx > 0) { historyIdx--; cmdInput.value = history[historyIdx]; } else { historyIdx = -1; cmdInput.value = ""; } }
 });
 
+/* ── Quick command buttons ── */
 document.querySelectorAll(".cmd-btn").forEach(btn => {
-  btn.addEventListener("click", () => { cmdInput.value = btn.getAttribute("data-cmd"); submitInput(); });
+  btn.addEventListener("click", () => {
+    const cmd = btn.getAttribute("data-cmd");
+    cmdInput.value = cmd;
+    submitInput();
+  });
 });
 
+/* ── Sidebar filter ── */
+document.getElementById("sidebarFilter").addEventListener("input", function () {
+  const q = this.value.trim().toLowerCase();
+  document.querySelectorAll(".cmd-group").forEach(group => {
+    let anyVisible = false;
+    group.querySelectorAll(".cmd-btn").forEach(btn => {
+      const match = !q || btn.getAttribute("data-cmd").toLowerCase().includes(q);
+      btn.classList.toggle("hidden", !match);
+      if (match) anyVisible = true;
+    });
+    group.style.display = anyVisible ? "" : "none";
+  });
+});
+
+/* ── Mobile sidebar toggle ── */
+const sidebar = document.getElementById("sidebar");
+const overlay = document.getElementById("sidebarOverlay");
+const hamburger = document.getElementById("hamburgerBtn");
+
+hamburger.addEventListener("click", () => {
+  sidebar.classList.toggle("open");
+  overlay.classList.toggle("active");
+});
+overlay.addEventListener("click", () => {
+  sidebar.classList.remove("open");
+  overlay.classList.remove("active");
+});
+
+/* ── Periodic connection check (every 5 s, silent) ── */
+setInterval(async () => {
+  try {
+    const res = await fetch(API, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ args: ["PING"] })
+    });
+    const data = await res.json();
+    setConnected(data.ok);
+  } catch { setConnected(false); }
+}, 5000);
+
+/* ── Initial connection check ── */
 (async () => {
   try {
     const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: ["PING"] }) });
