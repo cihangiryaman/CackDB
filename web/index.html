@@ -3,120 +3,517 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>inMemDb — Test Console</title>
+<title>CackDB — Test Console</title>
 <style>
   :root {
-    --bg: #0d1117; --surface: #161b22; --border: #30363d;
-    --text: #e6edf3; --dim: #8b949e; --accent: #58a6ff;
-    --green: #3fb950; --red: #f85149; --yellow: #d29922;
-    --orange: #e3853a;
-    --font: 'Segoe UI', system-ui, sans-serif;
-    --mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    /* Modern Dark Theme */
+    --bg-base: #0f172a;
+    --bg-surface: #1e293b;
+    --bg-surface-hover: #334155;
+    --border-color: #334155;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    
+    --accent-primary: #3b82f6;
+    --accent-primary-hover: #2563eb;
+    
+    --color-success: #10b981;
+    --color-error: #ef4444;
+    --color-warning: #f59e0b;
+    --color-command: #a855f7;
+    --color-string: #facc15;
+    
+    --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+    
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
   }
+
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: var(--font); min-height: 100vh; display: flex; flex-direction: column; }
+  
+  body { 
+    background-color: var(--bg-base); 
+    color: var(--text-main); 
+    font-family: var(--font-sans); 
+    height: 100vh; 
+    overflow: hidden; 
+    display: flex; 
+    flex-direction: column; 
+    -webkit-font-smoothing: antialiased;
+  }
 
   /* ── Header ── */
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 14px; position: relative; z-index: 30; }
-  header h1 { font-size: 20px; font-weight: 600; }
-  header h1 span { color: var(--accent); }
-  .status { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--dim); }
-  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); transition: background .3s; }
-  .status-dot.connected { background: var(--green); }
+  header { 
+    background-color: var(--bg-surface); 
+    border-bottom: 1px solid var(--border-color); 
+    padding: 16px 24px; 
+    display: flex; 
+    align-items: center; 
+    gap: 16px; 
+    position: relative; 
+    z-index: 30;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+  
+  .logo span { color: var(--accent-primary); }
+  
+  .status-badge {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background-color: rgba(255, 255, 255, 0.05);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border-color);
+  }
+  
+  .status-dot { 
+    width: 8px; 
+    height: 8px; 
+    border-radius: 50%; 
+    background-color: var(--color-error); 
+    box-shadow: 0 0 8px var(--color-error);
+    transition: background-color 0.3s, box-shadow 0.3s; 
+  }
+  
+  .status-dot.connected { 
+    background-color: var(--color-success); 
+    box-shadow: 0 0 8px var(--color-success);
+  }
 
-  /* Hamburger — only visible on mobile */
-  .hamburger { display: none; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 6px 10px; border-radius: 6px; font-size: 16px; cursor: pointer; line-height: 1; }
-  .hamburger:hover { background: var(--border); }
+  /* Hamburger — mobile */
+  .hamburger { 
+    display: none; 
+    background: transparent; 
+    border: none; 
+    color: var(--text-main); 
+    font-size: 24px; 
+    cursor: pointer; 
+    padding: 4px;
+  }
 
   /* ── Layout ── */
   .container { display: flex; flex: 1; overflow: hidden; position: relative; }
 
   /* ── Sidebar ── */
-  .sidebar { width: 280px; background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; padding: 16px; flex-shrink: 0; display: flex; flex-direction: column; gap: 0; }
-  .sidebar-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .sidebar-header h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--dim); }
-  .sidebar-filter { width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--font); font-size: 12px; padding: 7px 10px; border-radius: 6px; outline: none; margin-bottom: 14px; }
-  .sidebar-filter:focus { border-color: var(--accent); }
-  .cmd-group { margin-bottom: 20px; }
-  .cmd-group h3 { font-size: 13px; color: var(--accent); margin-bottom: 8px; }
-  .cmd-btn { display: block; width: 100%; text-align: left; background: transparent; border: 1px solid var(--border); color: var(--text); padding: 8px 10px; border-radius: 6px; font-family: var(--mono); font-size: 12px; cursor: pointer; margin-bottom: 6px; transition: all .15s; }
-  .cmd-btn:hover { background: var(--border); border-color: var(--accent); }
+  .sidebar { 
+    width: 280px; 
+    background-color: var(--bg-surface); 
+    border-right: 1px solid var(--border-color); 
+    display: flex; 
+    flex-direction: column; 
+    flex-shrink: 0;
+    z-index: 20;
+    transition: transform 0.3s ease;
+  }
+  
+  .sidebar-inner {
+    padding: 20px 16px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  
+  .sidebar-header { margin-bottom: 16px; }
+  .sidebar-header h2 { 
+    font-size: 11px; 
+    text-transform: uppercase; 
+    letter-spacing: 0.05em; 
+    font-weight: 600;
+    color: var(--text-muted); 
+  }
+  
+  .sidebar-search {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  
+  .sidebar-search input {
+    width: 100%;
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    color: var(--text-main);
+    font-family: var(--font-sans);
+    font-size: 13px;
+    padding: 10px 12px 10px 32px;
+    border-radius: var(--radius-md);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  
+  .sidebar-search input:focus {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  }
+  
+  .sidebar-search::before {
+    content: "🔍";
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    opacity: 0.6;
+  }
+
+  .cmd-group { margin-bottom: 24px; }
+  .cmd-group h3 { 
+    font-size: 13px; 
+    color: var(--text-main); 
+    margin-bottom: 10px; 
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+  
+  .cmd-btn { 
+    display: block; 
+    width: 100%; 
+    text-align: left; 
+    background: transparent; 
+    border: 1px solid transparent; 
+    color: var(--text-muted); 
+    padding: 8px 12px; 
+    border-radius: var(--radius-sm); 
+    font-family: var(--font-mono); 
+    font-size: 12px; 
+    cursor: pointer; 
+    margin-bottom: 4px; 
+    transition: all 0.2s ease;
+  }
+  
+  .cmd-btn:hover { 
+    background-color: var(--bg-surface-hover); 
+    color: var(--text-main);
+  }
+  
   .cmd-btn.hidden { display: none; }
 
-  /* ── Sidebar overlay (mobile) ── */
-  .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 19; }
-  .sidebar-overlay.active { display: block; }
+  .sidebar-overlay { 
+    display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(2px); z-index: 19; 
+    opacity: 0; transition: opacity 0.3s ease;
+  }
+  .sidebar-overlay.active { display: block; opacity: 1; }
 
-  /* ── Console ── */
-  .console-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  /* ── Console Area ── */
+  .console-area { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    overflow: hidden; 
+    background-color: var(--bg-base);
+  }
 
-  .output { flex: 1; overflow-y: auto; padding: 16px 24px; font-family: var(--mono); font-size: 13px; line-height: 1.7; }
-  .output .entry { margin-bottom: 8px; }
+  .output { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 24px; 
+    font-family: var(--font-mono); 
+    font-size: 14px; 
+    line-height: 1.6;
+    scroll-behavior: smooth;
+  }
+  
+  .output-inner {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
 
-  .output .cmd-line { color: var(--accent); display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px; }
-  .output .cmd-line::before { content: "❯ "; color: var(--green); flex-shrink: 0; }
-  .output .cmd-name { color: var(--orange); font-weight: 600; }
-  .output .cmd-args { color: var(--accent); }
+  .welcome-panel {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 24px;
+    margin-bottom: 24px;
+    color: var(--text-muted);
+    font-family: var(--font-sans);
+  }
+  
+  .welcome-panel h2 {
+    color: var(--text-main);
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+  
+  .welcome-panel code {
+    background-color: var(--bg-base);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--accent-primary);
+  }
+  
+  .welcome-panel ol {
+    margin-top: 12px;
+    margin-left: 20px;
+  }
+  
+  .welcome-panel li { margin-bottom: 8px; }
 
-  .output .result-wrap { position: relative; display: flex; align-items: flex-start; gap: 6px; padding-left: 16px; }
-  .output .result { color: var(--text); white-space: pre-wrap; flex: 1; }
-  .output .result.error { color: var(--red); }
-  .output .result.nil { color: var(--dim); font-style: italic; }
-  .output .copy-btn { opacity: 0; background: transparent; border: 1px solid var(--border); color: var(--dim); font-size: 11px; padding: 1px 6px; border-radius: 4px; cursor: pointer; flex-shrink: 0; transition: opacity .15s, color .15s; line-height: 1.6; margin-top: 2px; }
-  .output .result-wrap:hover .copy-btn { opacity: 1; }
-  .output .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+  /* Command Entry Styles */
+  .entry { 
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-  .output .ts { color: var(--dim); font-size: 11px; margin-left: 6px; }
-  .output .welcome { color: var(--dim); margin-bottom: 16px; }
+  .cmd-block {
+    display: inline-flex;
+    align-items: center;
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: var(--radius-md);
+    width: fit-content;
+    max-width: 100%;
+    position: relative;
+  }
+  
+  .cmd-block::before {
+    content: "❯";
+    color: var(--accent-primary);
+    margin-right: 12px;
+    font-weight: bold;
+  }
+
+  .cmd-name { 
+    color: var(--color-command); 
+    font-weight: 600; 
+    margin-right: 8px;
+  }
+  
+  .cmd-args { color: var(--color-string); }
+  
+  .ts { 
+    color: rgba(148, 163, 184, 0.4); 
+    font-size: 11px; 
+    margin-left: 16px;
+    font-family: var(--font-sans);
+  }
+
+  .result-block { 
+    display: flex; 
+    align-items: flex-start; 
+    gap: 12px; 
+    padding-left: 16px;
+    position: relative;
+  }
+  
+  .result-block::before {
+    content: "↳";
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+  
+  .result-content { 
+    color: var(--text-main); 
+    white-space: pre-wrap; 
+    flex: 1;
+    word-break: break-all;
+  }
+  
+  .result-content.error { color: var(--color-error); }
+  .result-content.nil { color: var(--text-muted); font-style: italic; }
+  
+  .copy-btn { 
+    opacity: 0; 
+    background: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    color: var(--text-muted); 
+    padding: 4px 8px; 
+    border-radius: var(--radius-sm); 
+    cursor: pointer; 
+    transition: all 0.2s; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .result-block:hover .copy-btn { opacity: 1; }
+  .copy-btn:hover { color: var(--text-main); border-color: var(--text-muted); }
 
   /* ── Quick-action bar ── */
-  .kv-panel { background: var(--surface); border-top: 1px solid var(--border); padding: 10px 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .kv-panel button { background: transparent; border: 1px solid var(--border); color: var(--accent); padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: background .15s; }
-  .kv-panel button:hover { background: var(--border); }
-  .kv-panel span { font-size: 12px; color: var(--dim); margin-left: auto; }
+  .action-bar { 
+    background-color: var(--bg-base); 
+    padding: 12px 24px; 
+    display: flex; 
+    gap: 12px; 
+    align-items: center; 
+    flex-wrap: wrap;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .action-bar button { 
+    background-color: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    color: var(--text-muted); 
+    padding: 6px 14px; 
+    border-radius: 999px; 
+    font-size: 12px; 
+    font-weight: 500;
+    cursor: pointer; 
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  
+  .action-bar button:hover { 
+    background-color: var(--bg-surface-hover); 
+    color: var(--text-main);
+    border-color: var(--text-muted);
+  }
+  
+  .action-bar button.danger:hover {
+    color: var(--color-error);
+    border-color: rgba(239, 68, 68, 0.3);
+    background-color: rgba(239, 68, 68, 0.1);
+  }
 
   /* ── Input bar ── */
-  .input-bar { background: var(--surface); border-top: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 12px; }
-  .input-bar label { color: var(--green); font-family: var(--mono); font-size: 14px; flex-shrink: 0; }
-  .input-bar input { flex: 1; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 14px; padding: 10px 14px; border-radius: 6px; outline: none; }
-  .input-bar input:focus { border-color: var(--accent); }
-  .input-bar input:disabled { opacity: .5; cursor: not-allowed; }
-  #sendBtn { background: var(--accent); color: #fff; border: none; padding: 10px 20px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; min-width: 68px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity .15s; }
-  #sendBtn:hover:not(:disabled) { opacity: .85; }
-  #sendBtn:disabled { opacity: .55; cursor: not-allowed; }
+  .input-area { 
+    background-color: var(--bg-surface); 
+    padding: 16px 24px; 
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .input-wrapper {
+    display: flex; 
+    align-items: center; 
+    background-color: var(--bg-base);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 4px 4px 4px 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .input-wrapper:focus-within {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+  
+  .input-prefix { color: var(--accent-primary); font-family: var(--font-mono); font-weight: bold; }
+  
+  .input-area input { 
+    flex: 1; 
+    background: transparent; 
+    border: none; 
+    color: var(--text-main); 
+    font-family: var(--font-mono); 
+    font-size: 15px; 
+    padding: 12px 16px; 
+    outline: none; 
+  }
+  
+  .input-area input::placeholder { color: var(--border-color); }
+  .input-area input:disabled { opacity: 0.5; cursor: not-allowed; }
+  
+  #sendBtn { 
+    background-color: var(--accent-primary); 
+    color: white; 
+    border: none; 
+    padding: 10px 24px; 
+    border-radius: calc(var(--radius-lg) - 4px); 
+    font-size: 14px; 
+    font-weight: 600; 
+    cursor: pointer; 
+    min-width: 80px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    transition: background-color 0.2s;
+  }
+  
+  #sendBtn:hover:not(:disabled) { background-color: var(--accent-primary-hover); }
+  #sendBtn:disabled { opacity: 0.7; cursor: not-allowed; }
 
   /* Spinner */
-  .spinner { width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; animation: spin .6s linear infinite; }
+  .spinner { 
+    width: 18px; 
+    height: 18px; 
+    border: 2px solid rgba(255,255,255,0.3); 
+    border-top-color: white; 
+    border-radius: 50%; 
+    animation: spin 0.8s linear infinite; 
+  }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── Toast ── */
-  #toast { position: fixed; top: 20px; right: 20px; background: #1f2937; border: 1px solid var(--border); color: var(--text); font-size: 13px; padding: 10px 18px; border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,.4); z-index: 100; opacity: 0; transform: translateY(-8px); transition: opacity .2s, transform .2s; pointer-events: none; }
+  #toast { 
+    position: fixed; 
+    bottom: 24px; 
+    right: 24px; 
+    background-color: var(--bg-surface); 
+    border: 1px solid var(--border-color); 
+    color: var(--text-main); 
+    font-size: 14px; 
+    padding: 12px 20px; 
+    border-radius: var(--radius-md); 
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3); 
+    z-index: 100; 
+    opacity: 0; 
+    transform: translateY(16px); 
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.success { border-color: var(--green); color: var(--green); }
-  #toast.error { border-color: var(--red); color: var(--red); }
+  #toast.success { border-bottom: 2px solid var(--color-success); }
+  #toast.error { border-bottom: 2px solid var(--color-error); }
 
-  /* ── Scrollbar ── */
-  ::-webkit-scrollbar { width: 6px; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
-  /* ── Mobile ── */
+  /* Mobile Responsive */
   @media (max-width: 768px) {
     .hamburger { display: block; }
     .sidebar {
-      position: fixed; top: 0; left: 0; height: 100%; z-index: 20;
-      transform: translateX(-100%); transition: transform .25s ease;
+      position: fixed; top: 0; left: 0; height: 100%;
+      transform: translateX(-100%);
     }
-    .sidebar.open { transform: translateX(0); }
+    .sidebar.open { transform: translateX(0); box-shadow: 4px 0 15px rgba(0,0,0,0.5); }
+    .output { padding: 16px; }
+    .input-area { padding: 12px 16px; }
+    .action-bar { padding: 10px 16px; overflow-x: auto; flex-wrap: nowrap; }
   }
 </style>
 </head>
 <body>
 
 <header>
-  <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">☰</button>
-  <h1><span>inMemDb</span> Test Console</h1>
-  <div class="status">
+  <button class="hamburger" id="hamburgerBtn" aria-label="Toggle menu">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+  </button>
+  <div class="logo">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
+    CackDB <span>Console</span>
+  </div>
+  <div class="status-badge" id="statusBadge">
     <div class="status-dot" id="statusDot"></div>
     <span id="statusText">Disconnected</span>
   </div>
@@ -126,74 +523,76 @@
 
 <div class="container">
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-header">
-      <h2>Quick Commands</h2>
-    </div>
-    <input type="search" class="sidebar-filter" id="sidebarFilter" placeholder="🔍 Filter commands…" autocomplete="off">
+    <div class="sidebar-inner">
+      <div class="sidebar-search">
+        <input type="search" id="sidebarFilter" placeholder="Filter commands…" autocomplete="off">
+      </div>
 
-    <div class="cmd-group" data-group="string">
-      <h3>🔑 String / Int</h3>
-      <button class="cmd-btn" data-cmd='SET test "hello world"'>SET test "hello world"</button>
-      <button class="cmd-btn" data-cmd="GET test">GET test</button>
-      <button class="cmd-btn" data-cmd="SET counter 0">SET counter 0</button>
-      <button class="cmd-btn" data-cmd="INCR counter">INCR counter</button>
-      <button class="cmd-btn" data-cmd="DECR counter">DECR counter</button>
-      <button class="cmd-btn" data-cmd="DEL test counter">DEL test counter</button>
-      <button class="cmd-btn" data-cmd="MSET a 1 b 2 c 3">MSET a 1 b 2 c 3</button>
-      <button class="cmd-btn" data-cmd="MGET a b c">MGET a b c</button>
-      <button class="cmd-btn" data-cmd="EXISTS test">EXISTS test</button>
-    </div>
+      <div class="cmd-group" data-group="string">
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path></svg> String / Int</h3>
+        <button class="cmd-btn" data-cmd='SET test "hello world"'>SET test "hello world"</button>
+        <button class="cmd-btn" data-cmd="GET test">GET test</button>
+        <button class="cmd-btn" data-cmd="SET counter 0">SET counter 0</button>
+        <button class="cmd-btn" data-cmd="INCR counter">INCR counter</button>
+        <button class="cmd-btn" data-cmd="DECR counter">DECR counter</button>
+        <button class="cmd-btn" data-cmd="DEL test counter">DEL test counter</button>
+        <button class="cmd-btn" data-cmd="MSET a 1 b 2 c 3">MSET a 1 b 2 c 3</button>
+        <button class="cmd-btn" data-cmd="MGET a b c">MGET a b c</button>
+        <button class="cmd-btn" data-cmd="EXISTS test">EXISTS test</button>
+      </div>
 
-    <div class="cmd-group" data-group="list">
-      <h3>📋 List</h3>
-      <button class="cmd-btn" data-cmd="RPUSH mylist apple banana cherry">RPUSH mylist apple banana cherry</button>
-      <button class="cmd-btn" data-cmd="LRANGE mylist 0 -1">LRANGE mylist 0 -1</button>
-      <button class="cmd-btn" data-cmd="LPUSH mylist first">LPUSH mylist first</button>
-      <button class="cmd-btn" data-cmd="LPOP mylist">LPOP mylist</button>
-      <button class="cmd-btn" data-cmd="RPOP mylist">RPOP mylist</button>
-      <button class="cmd-btn" data-cmd="LLEN mylist">LLEN mylist</button>
-    </div>
+      <div class="cmd-group" data-group="list">
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg> List</h3>
+        <button class="cmd-btn" data-cmd="RPUSH mylist a b c">RPUSH mylist a b c</button>
+        <button class="cmd-btn" data-cmd="LRANGE mylist 0 -1">LRANGE mylist 0 -1</button>
+        <button class="cmd-btn" data-cmd="LPUSH mylist first">LPUSH mylist first</button>
+        <button class="cmd-btn" data-cmd="LPOP mylist">LPOP mylist</button>
+        <button class="cmd-btn" data-cmd="RPOP mylist">RPOP mylist</button>
+        <button class="cmd-btn" data-cmd="LLEN mylist">LLEN mylist</button>
+      </div>
 
-    <div class="cmd-group" data-group="ttl">
-      <h3>⏱️ TTL</h3>
-      <button class="cmd-btn" data-cmd="SET session abc EX 60">SET session abc EX 60</button>
-      <button class="cmd-btn" data-cmd="EXPIRE test 30">EXPIRE test 30</button>
-      <button class="cmd-btn" data-cmd="TTL test">TTL test</button>
-      <button class="cmd-btn" data-cmd="PERSIST test">PERSIST test</button>
-    </div>
+      <div class="cmd-group" data-group="ttl">
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Expiration</h3>
+        <button class="cmd-btn" data-cmd="SET session abc EX 60">SET session abc EX 60</button>
+        <button class="cmd-btn" data-cmd="EXPIRE test 30">EXPIRE test 30</button>
+        <button class="cmd-btn" data-cmd="TTL test">TTL test</button>
+        <button class="cmd-btn" data-cmd="PERSIST test">PERSIST test</button>
+      </div>
 
-    <div class="cmd-group" data-group="server">
-      <h3>🖥️ Server</h3>
-      <button class="cmd-btn" data-cmd="PING">PING</button>
-      <button class="cmd-btn" data-cmd="DBSIZE">DBSIZE</button>
-      <button class="cmd-btn" data-cmd="INFO">INFO</button>
-      <button class="cmd-btn" data-cmd="SAVE">SAVE</button>
-      <button class="cmd-btn" data-cmd="FLUSHDB">FLUSHDB</button>
+      <div class="cmd-group" data-group="server">
+        <h3><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg> Server</h3>
+        <button class="cmd-btn" data-cmd="PING">PING</button>
+        <button class="cmd-btn" data-cmd="DBSIZE">DBSIZE</button>
+        <button class="cmd-btn" data-cmd="INFO">INFO</button>
+        <button class="cmd-btn" data-cmd="SAVE">SAVE</button>
+        <button class="cmd-btn" data-cmd="FLUSHDB">FLUSHDB</button>
+      </div>
     </div>
   </aside>
 
   <main class="console-area">
+    <div class="action-bar">
+      <button onclick="sendCommand('DBSIZE')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path><path d="M3 15v4a2 2 0 0 0 2 2h16v-4"></path><path d="M3 10v4a2 2 0 0 0 2 2h16v-4"></path></svg> DB Size</button>
+      <button onclick="sendCommand('PING')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M8 14s1.5 2 4 2 4-2 4-2"></path><line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="15" y1="9" x2="15.01" y2="9"></line></svg> Ping</button>
+      <button onclick="clearOutput()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Clear</button>
+      <button class="danger" onclick="flushAll()" style="margin-left: auto;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg> Flush All</button>
+    </div>
+    
     <div class="output" id="output">
-      <div class="welcome">
-        Welcome to the <b>inMemDb</b> test console.<br>
-        Type a command below or click a quick command on the left.<br><br>
-        <b>To start:</b><br>
-        1. Run <code>build\inmemdb-server.exe</code><br>
-        2. Run <code>node web\proxy.js</code><br>
-        3. Open <code>http://localhost:8080</code>
+      <div class="output-inner" id="outputInner">
+        <div class="welcome-panel" id="welcomePanel">
+          <h2>Welcome to CackDB Console</h2>
+          <p>A fast, interactive terminal for testing your in-memory database. Start executing commands below or pick from the sidebar.
+        </div>
       </div>
     </div>
-    <div class="kv-panel">
-      <button onclick="sendCommand('DBSIZE')">📊 DBSIZE</button>
-      <button onclick="sendCommand('PING')">🏓 PING</button>
-      <button onclick="flushAll()">🗑️ FLUSH ALL</button>
-      <button onclick="clearOutput()">🧹 Clear Console</button>
-      <span id="keyCount"></span>
-    </div>
-    <div class="input-bar">
-      <label>❯</label>
-      <input type="text" id="cmdInput" placeholder="Type a command… (e.g. SET name Alice)" autocomplete="off" spellcheck="false">
-      <button id="sendBtn" onclick="submitInput()">Send</button>
+    
+    <div class="input-area">
+      <div class="input-wrapper">
+        <span class="input-prefix">❯</span>
+        <input type="text" id="cmdInput" placeholder="Enter a command... (e.g., SET user:1 'Alice')" autocomplete="off" spellcheck="false">
+        <button id="sendBtn" onclick="submitInput()">Send</button>
+      </div>
     </div>
   </main>
 </div>
@@ -202,23 +601,26 @@
 
 <script>
 const API = "/cmd";
-const output = document.getElementById("output");
+const outputInner = document.getElementById("outputInner");
 const cmdInput = document.getElementById("cmdInput");
 const statusDot = document.getElementById("statusDot");
 const statusText = document.getElementById("statusText");
 const sendBtn = document.getElementById("sendBtn");
+const welcomePanel = document.getElementById("welcomePanel");
 
 let history = [], historyIdx = -1;
 let busy = false;
+let hasExecutedCommand = false;
 
 /* ── Toast ── */
 let toastTimer = null;
 function showToast(msg, type = "") {
   const t = document.getElementById("toast");
-  t.textContent = msg;
+  let icon = type === 'success' ? '✓ ' : type === 'error' ? '⚠ ' : '';
+  t.innerHTML = `<span>${icon}${msg}</span>`;
   t.className = "show" + (type ? " " + type : "");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { t.className = ""; }, 2200);
+  toastTimer = setTimeout(() => { t.className = ""; }, 3000);
 }
 
 /* ── Tokenizer ── */
@@ -228,10 +630,11 @@ function tokenize(line) {
   while (i < line.length) {
     while (i < line.length && line[i] === " ") i++;
     if (i >= line.length) break;
-    if (line[i] === '"') {
+    if (line[i] === '"' || line[i] === "'") {
+      let quote = line[i];
       i++;
       let s = "";
-      while (i < line.length && line[i] !== '"') s += line[i++];
+      while (i < line.length && line[i] !== quote) s += line[i++];
       if (i < line.length) i++;
       args.push(s);
     } else {
@@ -249,7 +652,7 @@ function setLoading(on) {
   cmdInput.disabled = on;
   sendBtn.disabled = on;
   if (on) {
-    sendBtn.innerHTML = '<span class="spinner"></span>';
+    sendBtn.innerHTML = '<div class="spinner"></div>';
   } else {
     sendBtn.textContent = "Send";
     cmdInput.focus();
@@ -260,6 +663,12 @@ function setLoading(on) {
 async function sendCommand(line, silent = false) {
   const args = tokenize(line.trim());
   if (args.length === 0) return;
+  
+  if (!hasExecutedCommand) {
+    if (welcomePanel) welcomePanel.style.display = 'none';
+    hasExecutedCommand = true;
+  }
+  
   if (!silent) appendCmd(line);
   setLoading(true);
   try {
@@ -284,9 +693,9 @@ async function sendCommand(line, silent = false) {
   }
 }
 
-/* ── FLUSHDB with confirmation ── */
+/* ── FLUSHDB ── */
 function flushAll() {
-  if (!confirm("⚠️  This will delete ALL keys from the database.\n\nAre you sure?")) return;
+  if (!confirm("⚠️ This will delete ALL keys from the database.\n\nAre you sure?")) return;
   sendCommand("FLUSHDB");
 }
 
@@ -297,10 +706,10 @@ function submitInput() {
   if (!line) return;
   history.unshift(line);
   historyIdx = -1;
-  /* Confirm dangerous commands typed manually too */
+  
   const cmd = line.trim().toUpperCase().split(/\s+/)[0];
   if (cmd === "FLUSHDB" || cmd === "FLUSHALL") {
-    if (!confirm("⚠️  This will delete ALL keys from the database.\n\nAre you sure?")) return;
+    if (!confirm("⚠️ This will delete ALL keys from the database.\n\nAre you sure?")) return;
   }
   sendCommand(line);
   cmdInput.value = "";
@@ -308,7 +717,7 @@ function submitInput() {
 
 /* ── Append command line ── */
 function appendCmd(text) {
-  const ts = new Date().toLocaleTimeString();
+  const ts = new Date().toLocaleTimeString([], { hour12: false });
   const tokens = text.trim().split(/\s+/);
   const cmdName = tokens[0] || "";
   const rest = tokens.slice(1).join(" ");
@@ -316,63 +725,73 @@ function appendCmd(text) {
   const div = document.createElement("div");
   div.className = "entry";
 
-  const cmdLine = document.createElement("div");
-  cmdLine.className = "cmd-line";
+  const cmdBlock = document.createElement("div");
+  cmdBlock.className = "cmd-block";
 
   const nameSpan = document.createElement("span");
   nameSpan.className = "cmd-name";
-  nameSpan.textContent = cmdName;
-  cmdLine.appendChild(nameSpan);
+  nameSpan.textContent = cmdName.toUpperCase();
+  cmdBlock.appendChild(nameSpan);
 
   if (rest) {
     const argsSpan = document.createElement("span");
     argsSpan.className = "cmd-args";
-    argsSpan.textContent = " " + esc(rest);
-    cmdLine.appendChild(argsSpan);
+    argsSpan.textContent = rest;
+    cmdBlock.appendChild(argsSpan);
   }
 
   const tsSpan = document.createElement("span");
   tsSpan.className = "ts";
   tsSpan.textContent = ts;
-  cmdLine.appendChild(tsSpan);
+  cmdBlock.appendChild(tsSpan);
 
-  div.appendChild(cmdLine);
-  output.appendChild(div);
-  output.scrollTop = output.scrollHeight;
+  div.appendChild(cmdBlock);
+  outputInner.appendChild(div);
+  scrollToBottom();
 }
 
-/* ── Append result with copy button ── */
+/* ── Append result ── */
 function appendResult(text, cls) {
-  const entries = output.querySelectorAll(".entry");
+  const entries = outputInner.querySelectorAll(".entry");
   const last = entries[entries.length - 1];
   if (!last) return;
 
-  const wrap = document.createElement("div");
-  wrap.className = "result-wrap";
+  const resultBlock = document.createElement("div");
+  resultBlock.className = "result-block";
 
-  const div = document.createElement("div");
-  div.className = "result " + (cls || "");
-  div.textContent = text;
+  const contentDiv = document.createElement("div");
+  contentDiv.className = "result-content " + (cls || "");
+  contentDiv.textContent = text;
 
   const copyBtn = document.createElement("button");
   copyBtn.className = "copy-btn";
   copyBtn.title = "Copy result";
-  copyBtn.textContent = "📋";
+  copyBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
   copyBtn.addEventListener("click", () => {
     navigator.clipboard.writeText(text).then(() => {
-      showToast("Copied to clipboard!", "success");
+      showToast("Copied to clipboard", "success");
     }).catch(() => showToast("Copy failed", "error"));
   });
 
-  wrap.appendChild(div);
-  wrap.appendChild(copyBtn);
-  last.appendChild(wrap);
-  output.scrollTop = output.scrollHeight;
+  resultBlock.appendChild(contentDiv);
+  resultBlock.appendChild(copyBtn);
+  last.appendChild(resultBlock);
+  scrollToBottom();
 }
 
-function clearOutput() { output.innerHTML = ""; }
+function scrollToBottom() {
+  const out = document.getElementById("output");
+  out.scrollTop = out.scrollHeight;
+}
 
-function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function clearOutput() { 
+  outputInner.innerHTML = ""; 
+  hasExecutedCommand = false;
+  if (welcomePanel) {
+    welcomePanel.style.display = 'block';
+    outputInner.appendChild(welcomePanel);
+  }
+}
 
 function setConnected(ok) {
   statusDot.className = "status-dot" + (ok ? " connected" : "");
@@ -382,16 +801,35 @@ function setConnected(ok) {
 /* ── Keyboard navigation ── */
 cmdInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter") { e.preventDefault(); submitInput(); }
-  if (e.key === "ArrowUp") { e.preventDefault(); if (historyIdx < history.length - 1) { historyIdx++; cmdInput.value = history[historyIdx]; } }
-  if (e.key === "ArrowDown") { e.preventDefault(); if (historyIdx > 0) { historyIdx--; cmdInput.value = history[historyIdx]; } else { historyIdx = -1; cmdInput.value = ""; } }
+  if (e.key === "ArrowUp") { 
+    e.preventDefault(); 
+    if (historyIdx < history.length - 1) { 
+      historyIdx++; 
+      cmdInput.value = history[historyIdx]; 
+    } 
+  }
+  if (e.key === "ArrowDown") { 
+    e.preventDefault(); 
+    if (historyIdx > 0) { 
+      historyIdx--; 
+      cmdInput.value = history[historyIdx]; 
+    } else { 
+      historyIdx = -1; 
+      cmdInput.value = ""; 
+    } 
+  }
 });
 
-/* ── Quick command buttons ── */
+/* ── Quick commands ── */
 document.querySelectorAll(".cmd-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     const cmd = btn.getAttribute("data-cmd");
     cmdInput.value = cmd;
     submitInput();
+    if(window.innerWidth <= 768) {
+      document.getElementById("sidebar").classList.remove("open");
+      document.getElementById("sidebarOverlay").classList.remove("active");
+    }
   });
 });
 
@@ -409,7 +847,7 @@ document.getElementById("sidebarFilter").addEventListener("input", function () {
   });
 });
 
-/* ── Mobile sidebar toggle ── */
+/* ── Mobile sidebar ── */
 const sidebar = document.getElementById("sidebar");
 const overlay = document.getElementById("sidebarOverlay");
 const hamburger = document.getElementById("hamburgerBtn");
@@ -423,7 +861,7 @@ overlay.addEventListener("click", () => {
   overlay.classList.remove("active");
 });
 
-/* ── Periodic connection check (every 5 s, silent) ── */
+/* ── Connection check ── */
 setInterval(async () => {
   try {
     const res = await fetch(API, {
@@ -436,7 +874,6 @@ setInterval(async () => {
   } catch { setConnected(false); }
 }, 5000);
 
-/* ── Initial connection check ── */
 (async () => {
   try {
     const res = await fetch(API, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ args: ["PING"] }) });
